@@ -12,4 +12,8 @@ struct _T_image {
 
 typedef struct _T_image T_image;
 
+// Loads an image structure from a text file.
 T_bool I_LoadImage(T_string path, T_image *image);
+
+// Deallocates an image structure.
+void I_DestroyImage(T_image *img);

@@ -23,6 +23,7 @@ int main() {
         E_RenderDisplay(&display);
     }
 
+    I_DestroyImage(&img);
     E_DestroyDisplay(&display);
     return 0;
 }

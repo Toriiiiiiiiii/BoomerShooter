@@ -16,6 +16,7 @@ typedef enum _T_logtype T_logtype;
 #define ANSI_BLUE "\e[34m"
 #define ANSI_DEFAULT "\e[0m"
 
+// Returns an ANSI escape sequence corresponding to log type's colour.
 inline static T_string E_GetColourANSI(T_logtype type) {
     switch(type){
         case E_LOG_INFO:
@@ -29,6 +30,7 @@ inline static T_string E_GetColourANSI(T_logtype type) {
     }
 }
 
+// Returns the label that goes at the start of a log message.
 inline static T_string E_GetLogLabel(T_logtype type) {
     switch(type) {
         case E_LOG_INFO:
@@ -42,6 +44,7 @@ inline static T_string E_GetLogLabel(T_logtype type) {
     }
 }
 
+// Logs a message to the console.
 inline static void E_Log(T_logtype type, T_string message) {
     T_string colour = E_GetColourANSI(type);
     T_string logLabel = E_GetLogLabel(type);

@@ -1,35 +1,15 @@
 #include "image.h"
 #include "types.h"
-#include <ctype.h>
+#include "util.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-T_qword I_GetNextNumber(T_string str, T_qword startIndex, T_qword *endIndex) {
-    T_qword index = startIndex;
-    while(index < strlen(str) && !isdigit(str[index])) {
-        index++;
-    }
-
-    if(index >= strlen(str)) {
-        *endIndex = strlen(str);
-        return 0;
-    }
-
-    char buffer[4] = {0};
-    T_dword bufferOffset = 0;
-    while(index < strlen(str) && isdigit(str[index]) && bufferOffset < 3) {
-        buffer[bufferOffset] = str[index];
-        index++;
-        bufferOffset++;
-    }
-
-    *endIndex = index;
-    return strtol(buffer, NULL, 10);
-}
-
 T_bool I_LoadImage(T_string path, T_image *image) {
     FILE *file = fopen(path, "r");
+
+    if(!file) return B_FALSE;
 
     T_qword read;
     T_qword lineLength = 0;
@@ -38,12 +18,13 @@ T_bool I_LoadImage(T_string path, T_image *image) {
     T_string line = NULL;
     T_qword dataOffset = 0;
 
+    // Reads each line into a variable. Stops the loop if EOF is reached.
     while((read = getline(&line, &lineLength, file)) != -1) {
         T_qword lineOffset = 0;
         // First line contains image width and height
         if(lineIndex == 0) {
-            image->width = I_GetNextNumber(line, lineOffset, &lineOffset);
-            image->height = I_GetNextNumber(line, lineIndex, &lineIndex); 
+            image->width = U_GetNextNumber(line, lineOffset, &lineOffset);
+            image->height = U_GetNextNumber(line, lineIndex, &lineIndex); 
         
             image->data = (T_byte *)malloc(image->width * image->height);
             lineIndex++;
@@ -51,7 +32,10 @@ T_bool I_LoadImage(T_string path, T_image *image) {
         }
 
         while(lineOffset < strlen(line)) {
-            T_byte colour = I_GetNextNumber(line, lineOffset, &lineOffset);
+            T_byte colour = U_GetNextNumber(line, lineOffset, &lineOffset);
+            
+            // Prevent writing image data if end of line is reached.
+            // This is a hacky solution to an issue created by U_GetNextNumber().
             if(lineOffset >= strlen(line)) continue;
 
             image->data[dataOffset] = colour;
@@ -60,4 +44,9 @@ T_bool I_LoadImage(T_string path, T_image *image) {
     }
 
     return B_TRUE;
+}
+
+void I_DestroyImage(T_image *img) {
+    img->width = img->height = 0;
+    free(img->data);
 }
