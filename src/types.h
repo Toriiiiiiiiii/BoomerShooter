@@ -8,3 +8,6 @@ typedef uint64_t T_qword;
 
 typedef char *T_string;
 typedef uint8_t T_bool;
+
+#define B_TRUE 1
+#define B_FALSE 0
