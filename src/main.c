@@ -9,6 +9,6 @@ int main() {
         E_RenderDisplay(&display);
     }
 
-    CloseWindow();
+    E_DestroyDisplay(&display);
     return 0;
 }

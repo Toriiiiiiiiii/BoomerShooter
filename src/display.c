@@ -29,6 +29,8 @@ T_display E_InitDisplay(T_dword width, T_dword height, T_dword pixelScale, T_str
 }
 
 void E_DestroyDisplay(T_display *display) {
+    CloseWindow();
+
     display->width = display->height = 0;
     free(display->display);
     free(display->zbuffer);
