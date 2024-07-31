@@ -4,6 +4,7 @@
 
 #include <raylib.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 T_display E_InitDisplay(T_dword width, T_dword height, T_dword pixelScale, T_string palettePath) {
     SetTraceLogLevel(LOG_ERROR);
@@ -18,6 +19,11 @@ T_display E_InitDisplay(T_dword width, T_dword height, T_dword pixelScale, T_str
     // Allocate memory for display buffer, z-buffer and the palette array.
     result.display = (T_byte *)malloc(width * height * sizeof(T_byte));
     result.zbuffer = (T_qword *)malloc(width * height * sizeof(T_qword));
+
+    for(T_dword index = 0; index < width * height; ++index) {
+        result.zbuffer[index] = 999999;
+    }
+
     result.palette = (T_qword *)malloc(256 * sizeof(T_qword));
 
     E_Log(E_LOG_INFO, "Initialized Display Buffer");
@@ -109,7 +115,16 @@ void E_RenderDisplay(T_display *display) {
         }
     }
 
+    char fpsString[256] = {0};
+    snprintf(fpsString, 256, "%d", GetFPS());
+    DrawText( fpsString, 0, 0, 20, RAYWHITE);
+
     EndDrawing();
+
+    // Clear zbuffer
+    for(T_dword index = 0; index < display->width * display->height; ++index) {
+        display->zbuffer[index] = 999999;
+    }
 }
 
 void E_SetPixel(T_display *display, T_dword x, T_dword y, T_byte c) {

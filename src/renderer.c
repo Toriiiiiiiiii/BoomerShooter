@@ -1,22 +1,57 @@
 #include "renderer.h"
 #include "actor.h"
 #include "display.h"
+#include "log.h"
 #include "math.h"
 #include "types.h"
+#include "world.h"
 #include <raylib.h>
 
 void E_RenderScene(T_display *display, T_actor *player) {
-    // Create test wall to render
-    T_wall wall = (T_wall) {
-        .x1 = 40,
-        .y1 = 10,
-        .x2 = 40,
-        .y2 = 290,
+    // Create test sector to render
+    T_sector testSector = {
+        .nwalls = 4,
+        .walls = {
+            (T_wall){
+                .x1 = -35, .y1 = 70,
+                .x2 =  35, .y2 = 70,
+                .facing = 2,
+                .colour = 197
+            },
+            (T_wall){
+                .x1 = -35, .y1 = 140,
+                .x2 =  35, .y2 = 140,
+                .facing = 0,
+                .colour = 197
+            },
+            (T_wall){
+                .x1 = -35, .y1 = 70,
+                .x2 = -35, .y2 = 140,
+                .facing = 3,
+                .colour = 191
+            },
+            (T_wall){
+                .x1 =  35, .y1 = 70,
+                .x2 =  35, .y2 = 140,
+                .facing = 1,
+                .colour = 191
+            },
+        },
         .z = 0,
         .h = 40
     };
 
-    E_RenderWall(display, player, wall);
+    E_RenderSector(display, player, testSector);
+}
+
+void E_RenderSector(T_display *display, T_actor *player, T_sector sector) {
+    if(sector.nwalls > 64 || sector.nwalls < 3) {
+        E_Log(E_LOG_ERR, "Attempting to draw sector with too many or too few walls.");
+    }
+
+    for(T_dword wallIndex = 0; wallIndex < sector.nwalls; ++wallIndex) {
+        E_RenderWall(display, player, sector.walls[wallIndex], sector.z, sector.h);
+    }
 }
 
 // Prevent division by 0 errors and clip wall if it is behind the player.
@@ -39,10 +74,13 @@ void E_ClipBehindPlayer(T_sdword *x1, T_sdword *y1, T_sdword *z1, T_sdword x2, T
 
 // Draws a wall based on projected points.
 // https://www.youtube.com/watch?v=huMO4VQEwPc&t=874s
-void E_DrawWall(T_display *display, T_sdword x1, T_sdword x2, T_sdword y1, T_sdword y2, T_sdword t1, T_sdword t2) {
+void E_DrawWall(T_display *display, T_sdword x1, T_sdword x2, T_sdword y1, T_sdword y2, T_sdword t1, T_sdword t2, T_sdword depth1, T_sdword depth2, T_byte colour) {
     T_float dyTop = t2-t1;
     T_float dyBottom = y2-y1;
     T_float dx = x2 - x1;
+    T_float dDepth = depth2 - depth1;
+    T_float depthGrad = dDepth / dx;
+
     if(dx == 0) dx = 1;
 
     T_dword startX = x1;
@@ -56,6 +94,7 @@ void E_DrawWall(T_display *display, T_sdword x1, T_sdword x2, T_sdword y1, T_sdw
     for(T_dword x = x1; x < x2; ++x) {
         T_float xy1 = dyBottom * (x - startX + 0.5)/dx + y1;
         T_float xy2 = dyTop * (x - startX + 0.5)/dx + t1;
+        T_float depth = depthGrad * (x - startX + 0.5) + depth1;
 
         // Clip y coordinates
         if(xy1 < 0) xy1 = 0;
@@ -64,14 +103,68 @@ void E_DrawWall(T_display *display, T_sdword x1, T_sdword x2, T_sdword y1, T_sdw
         if(xy2 > display->height + 1) xy2 = display->height + 1;
 
         for(T_dword y = xy1; y < xy2; ++y) {
-            E_SetPixel(display, x, (display->height) - y, 254);
+            if(display->zbuffer[y * display->width + x] < depth) continue;
+
+            display->zbuffer[y * display->width + x] = depth;
+            E_SetPixel(display, x, (display->height) - y, colour);
         }
     }
 }
 
 // Project the wall points and draw the wall.
 // Adapted from https://www.youtube.com/watch?v=huMO4VQEwPc&t=874s to fit the needs of the engine.
-void E_RenderWall(T_display *display, T_actor *player, T_wall wall) {
+void E_RenderWall(T_display *display, T_actor *player, T_wall wall, T_sdword z, T_sdword h) {
+    T_float swap;
+    switch(wall.facing) {
+        case 0:
+            if(wall.x2 < wall.x1) {
+                swap = wall.x1;
+                wall.x1 = wall.x2;
+                wall.x2 = swap;
+
+                swap = wall.y1;
+                wall.y1 = wall.y2;
+                wall.y2 = swap;
+            }
+            break;
+
+        case 1:
+            if(wall.y1 < wall.y2) {
+                swap = wall.x1;
+                wall.x1 = wall.x2;
+                wall.x2 = swap;
+
+                swap = wall.y1;
+                wall.y1 = wall.y2;
+                wall.y2 = swap;
+            }
+            break;
+
+        case 2:
+            if(wall.x1 < wall.x2) {
+                swap = wall.x1;
+                wall.x1 = wall.x2;
+                wall.x2 = swap;
+
+                swap = wall.y1;
+                wall.y1 = wall.y2;
+                wall.y2 = swap;
+            }
+            break;
+
+        case 3:
+            if(wall.y2 < wall.y1) {
+                swap = wall.x1;
+                wall.x1 = wall.x2;
+                wall.x2 = swap;
+
+                swap = wall.y1;
+                wall.y1 = wall.y2;
+                wall.y2 = swap;
+            }
+            break;
+    }
+
     T_dword plrAngle = player->angle;
     T_float plrAngleRad = (T_float)(plrAngle) * M_PI / 180.0;
 
@@ -81,17 +174,13 @@ void E_RenderWall(T_display *display, T_actor *player, T_wall wall) {
     // Translate wall x-coordinates
     T_float wx1 = (T_float)(wall.x1 - player->x);
     T_float wx2 = (T_float)(wall.x2 - player->x);
-    T_float wx3 = wx1;
-    T_float wx4 = wx2;
 
     // Translate wall y-coordinates
     T_float wy1 = (T_float)(wall.y1 - player->y);
     T_float wy2 = (T_float)(wall.y2 - player->y);
-    T_float wy3 = wy1;
-    T_float wy4 = wy2;
 
-    T_sdword wz = (T_float)(wall.z - player->z);
-    T_sdword wz2 = (T_float)(wz + wall.h);
+    T_sdword wz = (T_float)(z - player->z);
+    T_sdword wz2 = (T_float)(wz + h);
 
     // Rotate wall point 1
     T_sdword rotx1 = (cosAngle*wx1) - (sinAngle*wy1);
@@ -132,5 +221,5 @@ void E_RenderWall(T_display *display, T_actor *player, T_wall wall) {
     T_float topx2 = (T_float)(rotx4*200)/roty4 + (T_float)display->width / 2;
     T_float topy2 = (T_float)(wz2*200)/roty4 + (T_float)display->height/ 2;
 
-    E_DrawWall(display, px1, px2, py1, py2, topy1, topy2);
+    E_DrawWall(display, px1, px2, py1, py2, topy1, topy2, roty1, roty2, wall.colour);
 }
