@@ -3,7 +3,7 @@
 #include "types.h"
 
 #ifndef E_BACKGROUND_COLOUR
-    #define E_BACKGROUND_COLOUR 207
+    #define E_BACKGROUND_COLOUR 1
 #endif // E_BACKGROUND_COLOUR
 
 struct _T_display {

@@ -1,7 +1,7 @@
 CC = gcc
 
 CFLAGS = -g -c -Wall -Wpedantic
-LDFLAGS = -lraylib
+LDFLAGS = -lraylib -lm
 
 SRC = $(wildcard src/*.c)
 HDR = $(wildcard src/*.h)
